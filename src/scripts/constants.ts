@@ -11,6 +11,9 @@ const branch: string = import.meta.env.VITE_GIT_BRANCH;
 //     }
 // }
 
+const source_prefix = "https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/";
+
+const public_references_array = ["CH", "HZ", "ZG", "ZGE", "ZHJ", "ZHSP", "ZHG", "ZHH", "ZHR", "HS", "PC"] as const;
 const public_references = {
     CH: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/CH`,
     HZ: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/HZ`,
@@ -25,6 +28,7 @@ const public_references = {
     PC: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/PC`,
 } as const;
 
+const known_references_array = [...public_references_array, "ARF", "ARFR"] as const;
 const known_references = {
     ...public_references,
     ARF: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ARF`,

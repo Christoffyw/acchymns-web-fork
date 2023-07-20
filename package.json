@@ -1,6 +1,6 @@
 {
   "name": "acchymnal",
-  "version": "2.0.2",
+  "version": "2.0.3",
   "private": true,
   "scripts": {
     "postinstall": "patch-package",
@@ -25,6 +25,7 @@
     "@capacitor/toast": "^5.0.2",
     "@ionic/pwa-elements": "^3.1.1",
     "@vueuse/core": "^9.13.0",
+    "compare-versions": "^6.0.0",
     "panzoom": "^9.4.3",
     "pdfjs-dist": "^3.4.120",
     "pinia": "^2.0.32",

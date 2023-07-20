@@ -1,4 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
+import { compare } from 'compare-versions';
 
 export async function migrate() {
     const current_semver_version = import.meta.env.VITE_APP_VERSION;
@@ -24,8 +25,18 @@ export async function migrate() {
         }
         new_bookmarks = [...new Set(new_bookmarks)]; // Remove duplicates, if any
         await Preferences.set({ key: "bookmarks", value: JSON.stringify(new_bookmarks) });
+    } else if (compare(previous_semver_version.value, "2.0.3", "<")) {
+        // Migrate from 2.X.Y to 2.0.3
+        // Migrate from URLs for external books to references
+        const external_books: string[] = JSON.parse((await Preferences.get({ key: "externalBooks" })).value ?? "[]");
+        for (let i = 0; i < external_books.length; i++) {
+            const url = external_books[i];
+            const book_reference = url.split("books/")[1]; // Get the book reference, ex: acchymns.app/books/CH -> CH
+            external_books[i] = book_reference;
+        }
+        await Preferences.set({ key: "externalBooks", value: JSON.stringify(external_books) });
     }
 
     // Update the "previous semver version"
-    await Preferences.set({ key: "AppVersion", value: current_semver_version })
+    await Preferences.set({ key: "AppVersion", value: current_semver_version });
 }

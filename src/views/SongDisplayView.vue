@@ -1,20 +1,20 @@
 <script setup lang="ts">
 import SongContainer from "@/components/SongContainer.vue";
-import { onMounted, ref, computed, onUnmounted } from "vue";
-import { getSongMetaData } from "@/scripts/book_import";
+import { ref, computed, onUnmounted } from "vue";
 import { useRouter } from "vue-router";
 import type { SongReference } from "@/scripts/types";
 import { useNotes } from "@/composables/notes";
 import { Toast } from "@capacitor/toast";
 import { useCapacitorPreferences } from "@/composables/preferences";
 import { useLocalStorage } from "@vueuse/core";
+import { useBookSongList } from "@/composables/book_metadata";
+import type { BookReference } from "@/scripts/constants";
 
 const props = defineProps<SongReference>();
 
 const router = useRouter();
 
 const { player, isPlaying } = useNotes();
-const notes = ref<string[]>([]);
 
 const bookmarks = useCapacitorPreferences<SongReference[]>("bookmarks", []);
 const is_bookmarked = computed(() => {
@@ -36,11 +36,9 @@ async function toggleBookmark() {
     }
 }
 
-onMounted(async () => {
-    const SONG_METADATA = await getSongMetaData(props.book);
-    if (SONG_METADATA != null) {
-        notes.value = (SONG_METADATA[props.number]?.notes ?? []).reverse(); // Reverse as we want bass -> soprano
-    }
+const { song_list } = useBookSongList(props.book as BookReference);
+const notes = computed(() => {
+    return song_list.value?.[props.number]?.notes ?? [];
 });
 
 onUnmounted(() => {
@@ -51,7 +49,7 @@ let starting_notes_tooltip_status = useLocalStorage<boolean>("starting_notes_too
 let tooltip = ref<Element>();
 
 function play() {
-    player.play(notes);
+    player.play(notes.value);
     hideTooltip();
 }
 

@@ -7,6 +7,8 @@ import { Capacitor } from "@capacitor/core";
 import { ref, onMounted, readonly, computed, onUpdated } from "vue";
 import PDFWrapper from "./PDFWrapper.vue";
 import { useLocalStorage, useMediaQuery } from "@vueuse/core";
+import { getBookUrl } from "@/composables/book_metadata";
+import type { BookReference } from "@/scripts/constants";
 
 const props = defineProps<SongReference>();
 
@@ -47,7 +49,7 @@ onMounted(async () => {
         error_is_active.value = true;
         return;
     }
-    const songSrc = getSongSrc(props.book, props.number, BOOK_METADATA);
+    const songSrc = getBookUrl(props.book as BookReference) + "/songs/" + props.number + "." + .fileExtension;
     song_img_type.value = BOOK_METADATA[props.book].fileExtension;
     song_img_src.value = songSrc;
     if (panzoom_enabled.value) {

@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
-import { getAllBookMetaData, getSongMetaData } from "@/scripts/book_import";
+import { computed, onMounted, ref } from "vue";
+import { useBookSummary, useBookSongList } from "@/composables/book_metadata";
 import { RouterLink, useRouter } from "vue-router";
 import { useLocalStorage, useSessionStorage } from "@vueuse/core";
+import type { BookReference } from "@/scripts/constants";
 
 const props = defineProps<{
     book: string;
@@ -13,26 +14,14 @@ let topical_index_tooltip_status = useLocalStorage<boolean>("topical_index_toolt
 
 const error_active = ref(false);
 
-const song_numbers = ref<string[]>([]);
-let book_name = ref("");
-let index_available = ref(false);
-let button_color = ref("#000000");
-let tooltip = ref<Element>();
+const { summary: book } = useBookSummary(props.book as BookReference);
+const { song_list } = useBookSongList(props.book as BookReference);
+const song_numbers = computed(() => {
+    if (song_list.value == null) return [];
+    return Object.keys(song_list.value).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
+});
 
 onMounted(async () => {
-    const BOOK_METADATA = await getAllBookMetaData();
-    const songs = await getSongMetaData(props.book);
-
-    if (songs == null) {
-        error_active.value = true;
-        return;
-    }
-    song_numbers.value = Object.keys(songs).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
-
-    book_name.value = BOOK_METADATA[props.book].name.medium;
-    button_color.value = BOOK_METADATA[props.book].primaryColor;
-    index_available.value = BOOK_METADATA[props.book].indexAvailable;
-
     useSessionStorage<boolean>("isAlphabetical", false).value = false;
 });
 
@@ -52,14 +41,14 @@ function hideTooltip() {
                 <img @click="router.back()" class="ionicon" src="/assets/chevron-back-outline.svg" />
             </div>
             <div class="title--center">
-                <h1>{{ error_active ? "Unavailable" : book_name }}</h1>
+                <h1>{{ error_active ? "Unavailable" : book.name.medium }}</h1>
             </div>
             <div class="title--right">
                 <div @click="hideTooltip">
-                    <RouterLink v-if="index_available" :to="`/topical/${props.book}`" @click="topical_index_tooltip_status = true">
+                    <RouterLink v-if="book.indexAvailable" :to="`/topical/${props.book}`" @click="topical_index_tooltip_status = true">
                         <img class="ionicon" src="/assets/book-outline.svg" />
                     </RouterLink>
-                    <div v-if:="!topical_index_tooltip_status && index_available" class="tooltip" ref="tooltip">
+                    <div v-if:="!topical_index_tooltip_status && book.indexAvailable" class="tooltip" ref="tooltip">
                         <p class="tooltiptext">New! Topical Index</p>
                     </div>
                 </div>
@@ -72,7 +61,7 @@ function hideTooltip() {
     </div>
     <div v-else class="songs main-content">
         <!-- Buttons will be added here -->
-        <RouterLink v-for="song_num in song_numbers" :key="song_num" :to="`/display/${props.book}/${song_num}`" class="song-btn" :style="{ background: button_color }">
+        <RouterLink v-for="song_num in song_numbers" :key="song_num" :to="`/display/${props.book}/${song_num}`" class="song-btn" :style="{ background: book.primaryColor }">
             {{ song_num }}
         </RouterLink>
     </div>

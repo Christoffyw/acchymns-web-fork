@@ -1,11 +1,12 @@
 import { fetchCachedJSON } from "@/composables/cached_fetch";
 import type { BookSummary, SongList, BookIndex } from "@/scripts/types";
-import { prepackaged_book_urls } from "@/scripts/constants";
+// import { prepackaged_book_urls } from "@/scripts/constants";
 import { Preferences } from "@capacitor/preferences";
 
 async function getBookUrls() {
     const imported_book_urls = await Preferences.get({ key: "externalBooks" });
-    return prepackaged_book_urls.concat(JSON.parse(imported_book_urls.value ?? "[]"));
+    // return prepackaged_book_urls.concat(JSON.parse(imported_book_urls.value ?? "[]"));
+    return "";
 }
 
 async function fetchBookSummary(url: string, options: RequestInit & { timeout?: number } = { timeout: 500 }) {

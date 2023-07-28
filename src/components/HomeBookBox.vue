@@ -1,32 +1,28 @@
 <script setup lang="ts">
 import { useBookSummary } from "@/composables/book_metadata";
 import router from "@/router";
+import type { BookReference } from "@/scripts/constants";
 import { Capacitor } from "@capacitor/core";
 
 const props = withDefaults(
     defineProps<{
-        src: string;
-        withLink?: boolean;
+        book_ref: BookReference;
+        with_link?: boolean;
     }>(),
     {
-        withLink: true,
+        with_link: true,
     }
 );
 
-const {
-    summary: book,
-    isFinished,
-    isSlowFetch,
-} = useBookSummary(props.src, {
-    timeout: 10000,
-    slowFetchThreshold: 200,
-});
+const { summary: book } = useBookSummary(props.book_ref);
+const isFinished = true;
+const isSlowFetch = false;
 </script>
 
 <template>
     <!-- Book has been successfully loaded -->
     <template v-if="isFinished && book != null">
-        <component :is="withLink ? 'RouterLink' : 'div'" :to="`selection/${book.name.short}`" class="book" :style="`background: linear-gradient(135deg, ${book.primaryColor}, ${book.secondaryColor})`">
+        <component :is="with_link ? 'RouterLink' : 'div'" :to="`selection/${book.name.short}`" class="book" :style="`background: linear-gradient(135deg, ${book.primaryColor}, ${book.secondaryColor})`">
             <div class="book_title">{{ book.name.medium }}</div>
             <!-- Allow a consumer to insert whatever they'd like -->
             <slot></slot>

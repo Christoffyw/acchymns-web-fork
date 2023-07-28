@@ -1,101 +1,54 @@
 <script setup lang="ts">
-import { computed, onUpdated, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { Toast } from "@capacitor/toast";
 import { RouterLink } from "vue-router";
-import { useNavigator } from "@/router/navigator";
-const { back } = useNavigator();
 import HomeBookBox from "@/components/HomeBookBox.vue";
-import { known_references, public_references } from "@/scripts/constants";
+import { known_references, public_references, type BookReference, includes } from "@/scripts/constants";
 import { useCapacitorPreferences } from "@/composables/preferences";
 import { useLocalStorage } from "@vueuse/core";
-import router from "@/router";
 
 // Not watching deeply, must assign new array
 
-const imported_book_urls = useCapacitorPreferences<string[]>("externalBooks", []);
+const imported_book_refs = useCapacitorPreferences<BookReference[]>("externalBooks", []);
 let import_books_tooltip_status = useLocalStorage<boolean>("import_books_tooltip_complete", false);
 
 // Preview books are books that haven't been imported, and are publicly available
-const preview_books_urls = computed(() => {
-    return Object.values(public_references).filter(url => !imported_book_urls.value.includes(url));
+const preview_book_refs = computed(() => {
+    return public_references.filter(book_ref => !imported_book_refs.value.includes(book_ref));
 });
 
 const reference_input = ref("");
 
-async function addImportedURL(url: string, show_on_success: boolean = true): Promise<boolean> {
-    let resp: Response | null = null;
-    try {
-        const controller = new AbortController();
-        const id = setTimeout(() => controller.abort(), 2000);
-        resp = await fetch(url + "/summary.json", {
-            method: "HEAD",
-            signal: controller.signal,
-        });
-        clearTimeout(id);
-    } catch (e: any) {
-        if (e.name == "TypeError") {
-            await Toast.show({
-                text: `Failed to load hymnal!`,
-            });
-            return false;
-        }
-        if (e.name != "AbortError") {
-            throw e;
-        }
-    }
-
-    if (resp == null || !resp.ok || resp.status != 200) {
-        await Toast.show({
-            text: `Failed to load hymnal!`,
-        });
-        return false;
-    }
-
-    if (!imported_book_urls.value.includes(url)) {
-        imported_book_urls.value.push(url);
-        if (show_on_success) {
-            await Toast.show({
-                text: `Successfully imported hymnal!`,
-            });
-        }
-        return true;
-    } else {
-        await Toast.show({
-            text: `Hymnal already imported!`,
-        });
-        return false;
-    }
-}
-
 async function addImportedBookByCode(short_book_name: string) {
-    if (short_book_name in known_references) {
-        const to_import_url = known_references[short_book_name as keyof typeof known_references];
-        // Check for duplicate url
-        if (imported_book_urls.value.includes(to_import_url)) {
-            await Toast.show({
-                text: `Hymnal (${short_book_name}) already imported!`,
-            });
-        } else {
-            if (await addImportedURL(to_import_url, false)) {
-                await Toast.show({
-                    text: `Successfully imported hymnal (${short_book_name})!`,
-                });
-            }
-        }
-    } else {
-        // Unknown code
+    // Check if the inputted reference is valid
+    if (!includes(known_references, short_book_name)) {
         await Toast.show({
             text: `Unknown hymnal reference (${short_book_name})!`,
         });
+        return;
     }
+
+    // Check for duplicate reference
+    if (imported_book_refs.value.includes(short_book_name)) {
+        await Toast.show({
+            text: `Hymnal (${short_book_name}) already imported!`,
+        });
+        return;
+    }
+
+    // Otherwise, add the reference
+    imported_book_refs.value.unshift(short_book_name);
+    await Toast.show({
+        text: `Successfully imported hymnal (${short_book_name})!`,
+    });
 }
 
-onUpdated(() => {
+onMounted(() => {
     if (!import_books_tooltip_status.value) import_books_tooltip_status.value = true;
 });
 
-function removeImportedURL(to_remove: string) {
-    imported_book_urls.value = imported_book_urls.value.filter(url => url != to_remove);
+function removeImportedReference(to_remove: BookReference) {
+    imported_book_refs.value = imported_book_refs.value.filter(book_ref => book_ref != to_remove);
 }
 </script>
 
@@ -114,30 +67,26 @@ function removeImportedURL(to_remove: string) {
                 <img class="ionicon enter-button-icon" src="/assets/enter-outline.svg" />
             </a>
         </div>
-
-        <!-- Publicly available, but not imported books -->
-        <h2 v-if="preview_books_urls.length != 0">Available Hymnals</h2>
-        <div v-if="preview_books_urls.length != 0" class="warning-label-container">
+        <div class="warning-label-container">
             <img class="ionicon warning-icon" src="/assets/alert-circle-outline.svg" />
             <h5 class="warning-label">The hymnals below require an internet connection</h5>
         </div>
+
+        <!-- Publicly available, but not imported books -->
+        <h2 v-if="preview_book_refs.length != 0">Available Hymnals</h2>
         <div>
-            <HomeBookBox v-for="url in preview_books_urls" :key="url" :src="url" :with-link="false">
-                <button @click="addImportedURL(url)">
+            <HomeBookBox v-for="book_ref in preview_book_refs" :key="book_ref" :book_ref="book_ref" :with_link="false">
+                <button @click="addImportedBookByCode(book_ref)">
                     <img class="ionicon ionicon-custom booktext--right add-button-icon" src="/assets/add-circle-outline.svg" />
                 </button>
             </HomeBookBox>
         </div>
 
         <!-- Imported Books -->
-        <h2 v-if="imported_book_urls.length != 0">Imported Hymnals</h2>
-        <div v-if="imported_book_urls.length != 0 && preview_books_urls.length == 0" class="warning-label-container">
-            <img class="ionicon warning-icon" src="/assets/alert-circle-outline.svg" />
-            <h5 class="warning-label">The hymnals below require an internet connection</h5>
-        </div>
+        <h2 v-if="imported_book_refs.length != 0">Imported Hymnals</h2>
         <div style="padding-bottom: 200px">
-            <HomeBookBox id="import-book" v-for="url in imported_book_urls" :key="url" :src="url" :with-link="false">
-                <button @click="removeImportedURL(url)">
+            <HomeBookBox v-for="book_ref in imported_book_refs" :key="book_ref" :book_ref="book_ref" :with_link="false">
+                <button @click="removeImportedReference(book_ref)">
                     <img class="ionicon ionicon-custom add-button-icon" src="/assets/close.svg" />
                 </button>
             </HomeBookBox>

@@ -1,19 +1,24 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { getBookUrls } from "@/scripts/book_import";
 import { Capacitor } from "@capacitor/core";
 import HomeBookBox from "@/components/HomeBookBox.vue";
-import { onMounted, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 import { Network } from "@capacitor/network";
 import { useLocalStorage } from "@vueuse/core";
+import { useCapacitorPreferences } from "@/composables/preferences";
+import { prepackaged_books, type BookReference } from "@/scripts/constants";
 
-var hasConnection = ref<boolean>(false);
-let import_books_tooltip_status = useLocalStorage<boolean>("import_books_tooltip_complete", false);
-let tooltip = ref<Element>();
+const hasConnection = ref<boolean>(false);
+const import_books_tooltip_status = useLocalStorage<boolean>("import_books_tooltip_complete", false);
+const imported_book_refs = useCapacitorPreferences<BookReference[]>("externalBooks", []);
 
-const available_books = ref<string[]>([]);
+const tooltip = ref<Element>();
+
+const available_books = computed(() => {
+    return ([...prepackaged_books] as BookReference[]).concat(imported_book_refs.value);
+});
+
 onMounted(async () => {
-    available_books.value = await getBookUrls();
     hasConnection.value = (await Network.getStatus()).connected;
     console.log("Connected to the internet: " + hasConnection.value);
 });
@@ -27,7 +32,7 @@ function hideTooltip() {
 }
 
 function tooltipVisible(visible: boolean) {
-    return visible ? "padding-top: 50px;" : "";
+    return visible ? "padding-bottom: 50px;" : "";
 }
 </script>
 
@@ -36,8 +41,8 @@ function tooltipVisible(visible: boolean) {
         <h1 class="pagetitle">Home</h1>
     </div>
     <div id="appsection">
-        <HomeBookBox v-for="url in available_books" :key="url" :src="url"></HomeBookBox>
-        <div @click="hideTooltip">
+        <HomeBookBox v-for="book_ref in available_books" :key="book_ref" :book_ref="book_ref"></HomeBookBox>
+        <div @click="hideTooltip" :style="tooltipVisible(!import_books_tooltip_status)">
             <RouterLink to="/settings/import" v-if="hasConnection">
                 <img class="ionicon import-books-button" src="/assets/add-circle-outline.svg" />
             </RouterLink>
@@ -47,7 +52,7 @@ function tooltipVisible(visible: boolean) {
         </div>
 
         <template v-if="Capacitor.getPlatform() === 'web'">
-            <a class="app-button-container play-store-width" href="https://play.google.com/store/apps/details?id=com.ChristopherW.acchmns" :style="tooltipVisible(!import_books_tooltip_status)">
+            <a class="app-button-container play-store-width" href="https://play.google.com/store/apps/details?id=com.ChristopherW.acchmns">
                 <img class="app-button" src="/assets/en_badge_web_generic.png" />
             </a>
             <a class="app-button-container app-store-width" href="https://apps.apple.com/us/app/acc-hymns/id1634426405">

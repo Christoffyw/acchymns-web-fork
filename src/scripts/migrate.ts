@@ -1,5 +1,5 @@
 import { Preferences } from "@capacitor/preferences";
-import { compare } from 'compare-versions';
+import { compare } from "compare-versions";
 
 export async function migrate() {
     const current_semver_version = import.meta.env.VITE_APP_VERSION;

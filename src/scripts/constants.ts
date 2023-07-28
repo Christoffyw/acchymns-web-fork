@@ -1,38 +1,11 @@
-const prepackaged_books = ["ZH", "GH", "JH", "HG"];
-const prepackaged_book_urls: string[] = prepackaged_books.map(book_name => import.meta.env.BASE_URL + "books/" + book_name);
+const prepackaged_books = ["ZH", "GH", "JH", "HG"] as const;
+const public_references = ["CH", "HZ", "ZG", "ZGE", "ZHJ", "ZHSP", "ZHG", "ZHH", "ZHR", "HS", "PC"] as const;
+const known_references = [...public_references, "ARF", "ARFR"] as const;
 
-const branch: string = import.meta.env.VITE_GIT_BRANCH;
+export type BookReference = (typeof prepackaged_books)[number] | (typeof known_references)[number];
 
-// function calcUrl(book_name: string) {
-//     if (import.meta.env.DEV) {
-//         return import.meta.env.BASE_URL + "public/books/" + book_name;
-//     } else if (import.meta.env.MODE == "production") {
-//         return `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/${book_name}`;
-//     }
-// }
+export function includes<T>(array: readonly T[], item: any): item is T {
+    return array.includes(item);
+}
 
-const source_prefix = "https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/";
-
-const public_references_array = ["CH", "HZ", "ZG", "ZGE", "ZHJ", "ZHSP", "ZHG", "ZHH", "ZHR", "HS", "PC"] as const;
-const public_references = {
-    CH: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/CH`,
-    HZ: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/HZ`,
-    ZG: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZG`,
-    ZGE: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZGE`,
-    ZHJ: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZHJ`,
-    ZHSP: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZHSP`,
-    ZHG: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZHG`,
-    ZHH: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZHH`,
-    ZHR: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ZHR`,
-    HS: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/HS`,
-    PC: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/PC`,
-} as const;
-
-const known_references_array = [...public_references_array, "ARF", "ARFR"] as const;
-const known_references = {
-    ...public_references,
-    ARF: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ARF`,
-    ARFR: `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${branch}/public/books/ARFR`,
-} as const;
-
-export { prepackaged_books, prepackaged_book_urls, public_references, branch, known_references };
+export { prepackaged_books, public_references, known_references };

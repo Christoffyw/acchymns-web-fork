@@ -41,7 +41,7 @@ const { back } = useNavigator();
             <h5 class="releaseDate" style="color: rgb(200, 200, 200)">2022-07-16</h5>
             <ul style="margin-top: 5px">
                 <li class="change">Added missing songs</li>
-                <li class="change">Visual improvments</li>
+                <li class="change">Visual improvements</li>
             </ul>
         </a>
         <a class="changelog">

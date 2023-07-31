@@ -1,7 +1,8 @@
 import { useJSONFetch } from "@/composables/cancelable_fetch";
-import { prepackaged_books, includes, known_references } from "@/scripts/constants";
+import { prepackaged_books, includes, all_references } from "@/scripts/constants";
 import type { BookSummary, BookIndex, SongList } from "@/scripts/types";
 import type { BookReference } from "@/scripts/constants";
+import { reactive } from "vue";
 import { Capacitor } from "@capacitor/core";
 
 function getRemoteBookUrl(book_short_name: BookReference): string {
@@ -54,10 +55,12 @@ export function useBookIndex(book_short_name: BookReference) {
     return { index, ...rest };
 }
 
-export function useAllBookSummaries(book_references: BookReference[] = [...known_references]) {
-    return book_references.map(book_short_name => useBookSummary(book_short_name));
+export function useBookSummaries(book_references: BookReference[] = [...all_references]) {
+    const summary_fetch_results = book_references.map(book_short_name => useBookSummary(book_short_name));
+    return reactive(Object.fromEntries(book_references.map((k, i) => [k, summary_fetch_results[i]])));
 }
 
-export function useAllSongSummaries(book_references: BookReference[] = [...known_references]) {
-    return book_references.map(book_short_name => useBookSummary(book_short_name));
+export function useBookSongLists(book_references: BookReference[] = [...all_references]) {
+    const song_list_fetch_results = book_references.map(book_short_name => useBookSongList(book_short_name));
+    return reactive(Object.fromEntries(book_references.map((k, i) => [k, song_list_fetch_results[i]])));
 }

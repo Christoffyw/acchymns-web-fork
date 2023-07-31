@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { getAllSongMetaData, getAllBookMetaData } from "@/scripts/book_import";
-import { computed, ref, onMounted } from "vue";
+import { computed, ref, onMounted, watch } from "vue";
 import { Capacitor } from "@capacitor/core";
-import type { SongReference, SongSearchInfo, Song } from "@/scripts/types";
+import type { SongReference, SongSearchInfo, Song, BookSummary, SongList } from "@/scripts/types";
 
 import { useCapacitorPreferences } from "@/composables/preferences";
+import { useBookSummaries, useBookSongLists } from "@/composables/book_metadata";
 
 let search_query = ref("");
 let stripped_query = computed(() => {
@@ -16,7 +16,6 @@ let stripped_query = computed(() => {
         .normalize("NFD")
         .replace(/\p{Diacritic}/gu, "");
 });
-let available_songs = ref<SongSearchInfo[]>([]);
 
 let search_results = computed(() => {
     return available_songs.value
@@ -27,25 +26,29 @@ let search_results = computed(() => {
 });
 
 const bookmarks = useCapacitorPreferences<SongReference[]>("bookmarks", []);
+const book_summaries = useBookSummaries();
+const song_lists = useBookSongLists();
 
-onMounted(async () => {
-    const BOOK_METADATA = await getAllBookMetaData();
-    const SONG_METADATA = await getAllSongMetaData();
-
+const available_songs = computed<SongSearchInfo[]>(() => {
+    const result: SongSearchInfo[] = [];
     for (const bookmark of bookmarks.value) {
-        const song: Song = SONG_METADATA[bookmark.book][bookmark.number];
-        available_songs.value.push({
-            title: song.title ?? "",
-            number: bookmark.number,
-            book: BOOK_METADATA[bookmark.book],
-            stripped_title: (song?.title ?? "")
-                .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-                .replace(/s{2,}/g, " ")
-                .toLowerCase()
-                .normalize("NFD")
-                .replace(/\p{Diacritic}/gu, ""),
-        } as SongSearchInfo);
+        const song: Song | null = (song_lists?.[bookmark.book]?.list as unknown as SongList | null)?.[bookmark.number] ?? null;
+        const summary: BookSummary | null = (book_summaries?.[bookmark.book]?.summary as unknown as BookSummary | null) ?? null;
+        if (song && summary) {
+            result.push({
+                title: song.title ?? "",
+                number: bookmark.number,
+                book: summary,
+                stripped_title: (song?.title ?? "")
+                    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
+                    .replace(/s{2,}/g, " ")
+                    .toLowerCase()
+                    .normalize("NFD")
+                    .replace(/\p{Diacritic}/gu, ""),
+            } as SongSearchInfo);
+        }
     }
+    return result;
 });
 </script>
 

@@ -16,8 +16,9 @@ const app = createApp(App);
 app.use(createPinia());
 app.use(router);
 
-import { registerConsoleStore } from "@/stores/console";
-registerConsoleStore();
+// Weird issues with this and some computed functions
+// import { registerConsoleStore } from "@/stores/console";
+// registerConsoleStore();
 defineCustomElements(window);
 
 app.mount("#app");

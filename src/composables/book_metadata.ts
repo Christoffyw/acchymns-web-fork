@@ -2,7 +2,7 @@ import { useJSONFetch } from "@/composables/cancelable_fetch";
 import { prepackaged_books, includes, all_references } from "@/scripts/constants";
 import type { BookSummary, BookIndex, SongList } from "@/scripts/types";
 import type { BookReference } from "@/scripts/constants";
-import { computed, reactive, type MaybeRef, unref } from "vue";
+import { computed, type MaybeRef, unref, type ComputedRef } from "vue";
 import { Capacitor } from "@capacitor/core";
 import { useCapacitorPreferences } from "@/composables/preferences";
 
@@ -61,20 +61,10 @@ export function useBookIndex(book_short_name: BookReference) {
     return { index, ...rest };
 }
 
-export function useBookSummaries(book_references: MaybeRef<BookReference[]> = [...all_references]) {
-    return reactive(
-        computed(() => {
-            const summary_fetch_results = unref(book_references).map(book_short_name => useBookSummary(book_short_name));
-            return Object.fromEntries(unref(book_references).map((k, i) => [k, summary_fetch_results[i]]));
-        })
-    );
+export function useBookSummaries(book_references: MaybeRef<BookReference[]> = [...all_references]): ComputedRef<Record<string, ReturnType<typeof useBookSummary>>> {
+    return computed(() => Object.fromEntries(unref(book_references).map(k => [k, useBookSummary(k)])));
 }
 
-export function useBookSongLists(book_references: MaybeRef<BookReference[]> = [...all_references]) {
-    return reactive(
-        computed(() => {
-            const song_list_fetch_results = unref(book_references).map(book_short_name => useBookSongList(book_short_name));
-            return Object.fromEntries(unref(book_references).map((k, i) => [k, song_list_fetch_results[i]]));
-        })
-    );
+export function useBookSongLists(book_references: MaybeRef<BookReference[]> = [...all_references]): ComputedRef<Record<string, ReturnType<typeof useBookSongList>>> {
+    return computed(() => Object.fromEntries(unref(book_references).map(k => [k, useBookSongList(k)])));
 }

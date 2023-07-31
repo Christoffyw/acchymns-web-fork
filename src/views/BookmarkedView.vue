@@ -1,46 +1,39 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { computed, ref } from "vue";
+import { computed, readonly, ref, unref } from "vue";
 import { Capacitor } from "@capacitor/core";
-import type { SongReference, SongSearchInfo, Song, BookSummary } from "@/scripts/types";
+import type { SongReference, SongSearchInfo, BookSummary, SongList } from "@/scripts/types";
 
 import { useCapacitorPreferences } from "@/composables/preferences";
 import { useBookSummaries, useBookSongLists } from "@/composables/book_metadata";
 import { cleanStr } from "@/scripts/search";
 
-let search_query = ref("");
-let stripped_query = computed(() => {
-    return cleanStr(search_query.value);
-});
+const search_query = ref("");
+const stripped_query = computed(() => cleanStr(search_query.value));
 
-let search_results = computed(() => {
+const search_results = computed(() => {
     return available_songs.value
         .filter(s => {
-            return s.stripped_title?.includes(stripped_query.value) || s?.stripped_first_line?.includes(stripped_query.value) || s?.number?.includes(stripped_query.value);
+            return s.stripped_title?.includes(stripped_query.value) || s?.number?.includes(stripped_query.value);
         })
         .sort((a, b) => a.title.localeCompare(b.title));
 });
 
 const bookmarks = useCapacitorPreferences<SongReference[]>("bookmarks", []);
-const book_summaries = useBookSummaries();
-const song_lists = useBookSongLists();
+const book_summaries = readonly(useBookSummaries());
+const song_lists = readonly(useBookSongLists());
 
 const available_songs = computed<SongSearchInfo[]>(() => {
     const result: SongSearchInfo[] = [];
     for (const bookmark of bookmarks.value) {
-        const song: Song | null = song_lists.value?.[bookmark.book]?.list.value?.[bookmark.number] ?? null;
-        const summary: BookSummary | null = book_summaries.value?.[bookmark.book]?.summary.value ?? null;
-        if (song && summary) {
+        const song_list: SongList | null = unref(song_lists.value[bookmark.book]?.list) as SongList | null;
+        const summary: BookSummary | null = unref(book_summaries.value?.[bookmark.book]?.summary);
+        if (song_list != null && summary != null) {
             result.push({
-                title: song.title ?? "",
+                title: song_list[bookmark.number].title ?? "",
                 number: bookmark.number,
                 book: summary,
-                stripped_title: (song?.title ?? "")
-                    .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-                    .replace(/s{2,}/g, " ")
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/\p{Diacritic}/gu, ""),
+                stripped_title: cleanStr(song_list[bookmark.number].title ?? ""),
             } as SongSearchInfo);
         }
     }

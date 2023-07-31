@@ -15,6 +15,7 @@ export function useJSONFetch<T>(url: RequestInfo | URL, options: UseCancelableFe
     const isFailed = ref<boolean>(false);
 
     async function fetchJSON(url: RequestInfo | URL, options: UseCancelableFetchOptions) {
+        console.log(url);
         const controller = new AbortController();
         let id;
         if (options.timeout) {

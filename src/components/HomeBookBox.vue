@@ -22,7 +22,12 @@ const isSlowFetch = false;
 <template>
     <!-- Book has been successfully loaded -->
     <template v-if="isFinished && book != null">
-        <component :is="with_link ? 'RouterLink' : 'div'" :to="`selection/${book.name.short}`" class="book" :style="`background: linear-gradient(135deg, ${book.primaryColor}, ${book.secondaryColor})`">
+        <component
+            :is="with_link ? 'RouterLink' : 'div'"
+            :to="`selection/${book.name.short}`"
+            class="book"
+            :style="`background: linear-gradient(135deg, ${book.primaryColor}, ${book.secondaryColor})`"
+        >
             <div class="book_title">{{ book.name.medium }}</div>
             <!-- Allow a consumer to insert whatever they'd like -->
             <slot></slot>

@@ -1,19 +1,20 @@
 import { isRef, ref, watch, type Ref } from "vue";
 
-export type UseCachedFetchOptions = RequestInit & {
+export type UseCancelableFetchOptions = RequestInit & {
     timeout?: number;
     slowFetchThreshold?: number;
     bestAttempt?: boolean;
     cacheLife?: number; // How long to retain the cache in milliseconds
 };
 
-export function useFallbackJSONFetch<T>(url: RequestInfo | URL, fallback_url: RequestInfo | URL, options: UseCachedFetchOptions) {
-    const result: Ref<T | null> = ref(null);
+export function useJSONFetch<T>(url: RequestInfo | URL, options: UseCancelableFetchOptions) {
+    const data: Ref<T | null> = ref(null);
     const isFetching = ref<boolean>(false);
     const isSlowFetch = ref<boolean>(false);
     const isFinished = ref<boolean>(false);
+    const isFailed = ref<boolean>(false);
 
-    async function fetchJSON(url: RequestInfo | URL, options: UseCachedFetchOptions) {
+    async function fetchJSON(url: RequestInfo | URL, options: UseCancelableFetchOptions) {
         const controller = new AbortController();
         let id;
         if (options.timeout) {
@@ -33,10 +34,10 @@ export function useFallbackJSONFetch<T>(url: RequestInfo | URL, fallback_url: Re
 
     async function execute() {
         // Set starting lifecycle reporting
-        result.value = null;
         isFetching.value = false;
         isSlowFetch.value = false;
         isFinished.value = false;
+        isFailed.value = false;
 
         isFetching.value = true;
 
@@ -46,22 +47,13 @@ export function useFallbackJSONFetch<T>(url: RequestInfo | URL, fallback_url: Re
         const slow_fetch_id = setTimeout(() => (isSlowFetch.value = true), slow_fetch_threshold);
 
         try {
-            result.value = await fetchJSON(url, options);
+            data.value = await fetchJSON(url, options);
         } catch (ex: any) {
             // Any extra errors should be reported, aborts we can ignore
             const e = ex as DOMException;
             if (e.name != "AbortError") {
                 console.error("Primary URL:", e, e.stack);
-            }
-            try {
-                result.value = await fetchJSON(fallback_url, options);
-            } catch (ex2: any) {
-                const e2 = ex2 as DOMException;
-                if (e2.name != "AbortError") {
-                    console.error("Fallback URL:", e, e.stack);
-                    isFetching.value = false;
-                    return;
-                }
+                isFailed.value = true;
             }
         }
         clearTimeout(slow_fetch_id);
@@ -71,9 +63,10 @@ export function useFallbackJSONFetch<T>(url: RequestInfo | URL, fallback_url: Re
 
     execute();
 
+    // Refresh fetch results if url changes
     if (isRef(url)) {
         watch(url, () => execute());
     }
 
-    return { result, isFetching, isSlowFetch, isFinished };
+    return { data, isFetching, isSlowFetch, isFinished, isFailed };
 }

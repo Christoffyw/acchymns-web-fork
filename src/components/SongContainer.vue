@@ -1,27 +1,18 @@
 <script setup lang="ts">
-import { getAllBookMetaData } from "@/scripts/book_import";
-import type { BookSummary, SongReference } from "@/scripts/types";
+import type { SongReference } from "@/scripts/types";
 import type { PanZoom } from "panzoom";
 import createPanZoom from "panzoom";
 import { Capacitor } from "@capacitor/core";
 import { ref, onMounted, readonly, computed, onUpdated } from "vue";
 import PDFWrapper from "./PDFWrapper.vue";
 import { useLocalStorage, useMediaQuery } from "@vueuse/core";
-import { getBookUrl } from "@/composables/book_metadata";
+import { useBookSummary, getSongSrc } from "@/composables/book_metadata";
 import type { BookReference } from "@/scripts/constants";
 
 const props = defineProps<SongReference>();
 
-let song_img_type = ref("");
-let panzoom_container = ref<HTMLDivElement>();
-
-function getSongSrc(bookShort: string, songNum: string, BOOK_METADATA: { [k: string]: BookSummary }): string {
-    const fileName = songNum + "." + BOOK_METADATA[bookShort].fileExtension;
-    return `${BOOK_METADATA[bookShort].srcUrl}/songs/${fileName}`;
-}
-
-let song_img_src = ref("");
-let error_is_active = ref(false);
+const panzoom_container = ref<HTMLDivElement>();
+const error_is_active = ref(false);
 
 const system_prefers_dark_mode = useMediaQuery("(prefers-color-scheme: dark)");
 const override_system_theme = useLocalStorage("ACCOptions.overrideSystemTheme", false);
@@ -38,20 +29,20 @@ const dark_mode = computed(() => {
 
 const actually_invert = computed(() => dark_mode.value && song_invert.value);
 
-let panzoom_enabled = readonly(useLocalStorage("ACCOptions.panzoomEnable", true));
+const panzoom_enabled = readonly(useLocalStorage("ACCOptions.panzoomEnable", true));
+const isMobile = Capacitor.getPlatform() !== "web";
+
+const { summary: book_summary, isFailed } = useBookSummary(props.book as BookReference);
+const song_src = computed(() => {
+    if (book_summary.value != null) {
+        return getSongSrc(book_summary.value, props.number);
+    }
+    return "";
+});
+
 let panzoom: PanZoom;
-var isMobile = Capacitor.getPlatform() !== "web";
 
 onMounted(async () => {
-    const BOOK_METADATA = await getAllBookMetaData();
-    console.log(BOOK_METADATA[props.book]);
-    if (BOOK_METADATA[props.book] == undefined) {
-        error_is_active.value = true;
-        return;
-    }
-    const songSrc = getBookUrl(props.book as BookReference) + "/songs/" + props.number + "." + .fileExtension;
-    song_img_type.value = BOOK_METADATA[props.book].fileExtension;
-    song_img_src.value = songSrc;
     if (panzoom_enabled.value) {
         panzoom = createPanZoom(panzoom_container.value as HTMLDivElement, {
             beforeWheel: e => {
@@ -122,12 +113,12 @@ onUpdated(async () => {
 </script>
 
 <template>
-    <div v-if="error_is_active" class="fallback-container">
+    <div v-if="isFailed || error_is_active" class="fallback-container">
         <img src="/assets/wifi_off.svg" class="wifi-fallback" />
     </div>
     <div v-else ref="panzoom_container" class="panzoom-container">
-        <PDFWrapper v-if="song_img_type == 'pdf'" @error="error_is_active = true" :src="song_img_src" class="song-img" :class="{ 'inverted-song': actually_invert }" />
-        <img v-else-if="song_img_type !== ''" @error="error_is_active = true" :src="song_img_src" class="song-img" :class="{ 'inverted-song': actually_invert }" />
+        <PDFWrapper v-if="book_summary?.fileExtension == 'pdf'" @error="error_is_active = true" :src="song_src" class="song-img" :class="{ 'inverted-song': actually_invert }" />
+        <img v-else-if="book_summary?.fileExtension" @error="error_is_active = true" :src="song_src" class="song-img" :class="{ 'inverted-song': actually_invert }" />
     </div>
 </template>
 

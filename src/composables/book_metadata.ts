@@ -1,5 +1,5 @@
 import { useJSONFetch } from "@/composables/cancelable_fetch";
-import { prepackaged_books, includes } from "@/scripts/constants";
+import { prepackaged_books, includes, known_references } from "@/scripts/constants";
 import type { BookSummary, BookIndex, SongList } from "@/scripts/types";
 import type { BookReference } from "@/scripts/constants";
 import { Capacitor } from "@capacitor/core";
@@ -52,4 +52,12 @@ export function useBookIndex(book_short_name: BookReference) {
     const url = getBookUrl(book_short_name);
     const { data: index, ...rest } = useJSONFetch<BookIndex>(url + "/index.json", {});
     return { index, ...rest };
+}
+
+export function useAllBookSummaries(book_references: BookReference[] = [...known_references]) {
+    return book_references.map(book_short_name => useBookSummary(book_short_name));
+}
+
+export function useAllSongSummaries(book_references: BookReference[] = [...known_references]) {
+    return book_references.map(book_short_name => useBookSummary(book_short_name));
 }

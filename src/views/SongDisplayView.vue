@@ -36,7 +36,7 @@ async function toggleBookmark() {
     }
 }
 
-const { song_list } = useBookSongList(props.book as BookReference);
+const { list: song_list } = useBookSongList(props.book as BookReference);
 const notes = computed(() => {
     return song_list.value?.[props.number]?.notes ?? [];
 });

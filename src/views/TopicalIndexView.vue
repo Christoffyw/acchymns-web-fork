@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
-import { getAllBookMetaData, getSongMetaData, getBookIndex } from "@/scripts/book_import";
 import { RouterLink, useRouter } from "vue-router";
 import type { Song } from "@/scripts/types";
 import { useSessionStorage } from "@vueuse/core";
+import { useBookIndex, useBookSongList, useBookSummary } from "@/composables/book_metadata";
+import type { BookReference } from "@/scripts/constants";
 
 const props = defineProps<{
     book: string;
@@ -14,17 +15,11 @@ const show_list = ref(true);
 const error_active = ref(false);
 const scroll_topic_list = ref<Element | null>(null);
 
-let book_ref = ref("");
-let primary_color = ref("#FFFFFF");
-let secondary_color = ref("#000000");
-let topical_index = ref<{ [topic: string]: Song[] }>({});
 let active_topic = ref<string>("");
 
-let BOOK_SONG_METADATA: any = null;
-let BOOK_METADATA: any = null;
 const songs_to_display = computed(() => {
     if (isAlphabetical.value) {
-        return alphabeticalSongs.value;
+        return alphabetical_songs.value;
     } else {
         if (active_topic.value in topical_index.value) {
             return topical_index.value[active_topic.value];
@@ -33,39 +28,53 @@ const songs_to_display = computed(() => {
     return [];
 });
 
-onMounted(async () => {
-    BOOK_METADATA = await getAllBookMetaData();
-    BOOK_SONG_METADATA = await getSongMetaData(props.book);
-    book_ref.value = BOOK_METADATA[props.book].name.short;
-    primary_color.value = BOOK_METADATA[props.book].primaryColor;
-    secondary_color.value = BOOK_METADATA[props.book].secondaryColor;
-    const raw_index = await getBookIndex(BOOK_METADATA[props.book].name.short);
-    if (raw_index == null || BOOK_SONG_METADATA == null) {
-        error_active.value = true;
-        return;
+const { summary } = useBookSummary(props.book as BookReference);
+const { list: song_list } = useBookSongList(props.book as BookReference);
+const { index } = useBookIndex(props.book as BookReference);
+
+const topical_index = computed<{ [topic: string]: Song[] }>(() => {
+    let result: { [topic: string]: Song[] } = {};
+    if (song_list.value == null || index.value == null) {
+        return result;
     }
-    for (let [topic_name, numbers] of Object.entries(raw_index)) {
-        topical_index.value[topic_name] = [];
+
+    for (let [topic_name, numbers] of Object.entries(index.value)) {
+        result[topic_name] = [];
         for (let song_number of numbers) {
-            topical_index.value[topic_name].push({
+            const song = song_list.value[song_number];
+            result[topic_name].push({
                 number: song_number,
-                title: BOOK_SONG_METADATA[song_number].title,
-                notes: BOOK_SONG_METADATA[song_number].notes,
+                title: song?.title ?? "",
+                notes: song?.notes,
             });
         }
-        topical_index.value[topic_name].sort((a, b) => a.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "").localeCompare(b.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")));
+        result[topic_name].sort((a, b) => a.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "").localeCompare(b.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")));
     }
-    for (const song_number of Object.keys(BOOK_SONG_METADATA)) {
-        let song: Song = BOOK_SONG_METADATA[song_number];
-        alphabeticalSongs.value.push({
-            title: song?.title ?? "",
+
+    return result;
+});
+
+const alphabetical_songs = computed<Song[]>(() => {
+    let result: Song[] = [];
+    if (song_list.value == null) {
+        return result;
+    }
+
+    for (let song_number of Object.keys(song_list.value)) {
+        const song = song_list.value[song_number];
+        result.push({
             number: song_number,
+            title: song?.title ?? "",
             notes: song?.notes,
-            first_line: song?.first_line,
         });
     }
-    alphabeticalSongs.value.sort((a, b) => a.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "").localeCompare(b.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")));
 
+    result.sort((a, b) => a.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "").localeCompare(b.title.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")));
+
+    return result;
+});
+
+onMounted(async () => {
     if (isAlphabetical.value) {
         title.value = "Alphabetical Index";
         icon.value = "../assets/list-bulleted.svg";
@@ -110,7 +119,6 @@ function goBack() {
 }
 
 let isAlphabetical = useSessionStorage<boolean>("isAlphabetical", false);
-const alphabeticalSongs = ref<Song[]>([]);
 let title = ref("Topical Index");
 let icon = ref("../assets/text.svg");
 function toggleAlphabetical() {
@@ -147,7 +155,7 @@ function toggleAlphabetical() {
         <!-- Each Topical Section -->
         <div v-if="!isAlphabetical">
             <div ref="scroll_topic_list">
-                <div :key="active_topic" v-if="!show_list" class="topic" :style="{ background: primary_color }" @click="showList">
+                <div :key="active_topic" v-if="!show_list" class="topic" :style="{ background: summary?.primaryColor }" @click="showList">
                     <h3 class="topic-title">{{ active_topic }}</h3>
                 </div>
             </div>
@@ -155,9 +163,9 @@ function toggleAlphabetical() {
                 v-show="!show_list"
                 v-for="song in songs_to_display"
                 :key="song.title + song.number"
-                :to="`/display/${book_ref}/${song.number}`"
+                :to="`/display/${summary?.name.short}/${song.number}`"
                 class="song topic-song"
-                :style="`background: linear-gradient(135deg, ${primary_color}, ${secondary_color})`"
+                :style="`background: linear-gradient(135deg, ${summary?.primaryColor}, ${summary?.secondaryColor})`"
             >
                 <div>
                     <div class="song__title">{{ song.title }}</div>
@@ -168,7 +176,7 @@ function toggleAlphabetical() {
             </RouterLink>
             <div class="song-list">
                 <template v-for="(_topic_songs, topic) in topical_index" :key="topic">
-                    <div v-if="show_list" class="topic expanded-topic" :style="{ background: primary_color }" @click="hideList(topic as string)">
+                    <div v-if="show_list" class="topic expanded-topic" :style="{ background: summary?.primaryColor }" @click="hideList(topic as string)">
                         <h3 class="topic-title">{{ topic }}</h3>
                     </div>
                 </template>
@@ -178,9 +186,9 @@ function toggleAlphabetical() {
             <RouterLink
                 v-for="song in songs_to_display"
                 :key="song.title + song.number"
-                :to="`/display/${book_ref}/${song.number}`"
+                :to="`/display/${summary?.name.short}/${song.number}`"
                 class="song topic-song"
-                :style="`background: linear-gradient(135deg, ${primary_color}, ${secondary_color})`"
+                :style="`background: linear-gradient(135deg, ${summary?.primaryColor}, ${summary?.secondaryColor})`"
             >
                 <div>
                     <div class="song__title">{{ song.title }}</div>

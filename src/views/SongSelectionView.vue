@@ -13,9 +13,10 @@ const router = useRouter();
 let topical_index_tooltip_status = useLocalStorage<boolean>("topical_index_tooltip_complete", false);
 
 const error_active = ref(false);
+const tooltip = ref<Element | null>(null);
 
 const { summary: book } = useBookSummary(props.book as BookReference);
-const { song_list } = useBookSongList(props.book as BookReference);
+const { list: song_list } = useBookSongList(props.book as BookReference);
 const song_numbers = computed(() => {
     if (song_list.value == null) return [];
     return Object.keys(song_list.value).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
@@ -41,14 +42,14 @@ function hideTooltip() {
                 <img @click="router.back()" class="ionicon" src="/assets/chevron-back-outline.svg" />
             </div>
             <div class="title--center">
-                <h1>{{ error_active ? "Unavailable" : book.name.medium }}</h1>
+                <h1>{{ error_active || book == null ? "Unavailable" : book.name.medium }}</h1>
             </div>
             <div class="title--right">
                 <div @click="hideTooltip">
-                    <RouterLink v-if="book.indexAvailable" :to="`/topical/${props.book}`" @click="topical_index_tooltip_status = true">
+                    <RouterLink v-if="book?.indexAvailable" :to="`/topical/${props.book}`" @click="topical_index_tooltip_status = true">
                         <img class="ionicon" src="/assets/book-outline.svg" />
                     </RouterLink>
-                    <div v-if:="!topical_index_tooltip_status && book.indexAvailable" class="tooltip" ref="tooltip">
+                    <div v-if:="!topical_index_tooltip_status && book?.indexAvailable" class="tooltip" ref="tooltip">
                         <p class="tooltiptext">New! Topical Index</p>
                     </div>
                 </div>

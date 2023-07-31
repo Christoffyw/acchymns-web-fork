@@ -44,13 +44,6 @@ onMounted(async () => {
                 .toLowerCase()
                 .normalize("NFD")
                 .replace(/\p{Diacritic}/gu, ""),
-            stripped_first_line:
-                song?.first_line
-                    ?.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")
-                    ?.replace(/s{2,}/g, " ")
-                    ?.toLowerCase()
-                    ?.normalize("NFD")
-                    ?.replace(/\p{Diacritic}/gu, "") ?? "",
         } as SongSearchInfo);
     }
 });

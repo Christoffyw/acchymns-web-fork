@@ -51,12 +51,4 @@ async function getSongMetaData(book_short_name: string): Promise<SongList | null
     return null;
 }
 
-async function getBookIndex(book_short_name: string): Promise<BookIndex | null> {
-    const BOOK_METADATA = await getAllBookMetaData();
-    if (BOOK_METADATA[book_short_name] !== undefined) {
-        return await fetchCachedJSON(`${BOOK_METADATA[book_short_name].srcUrl}/index.json`, {});
-    }
-    return null;
-}
-
-export { getBookUrls, fetchBookSummary, getAllBookMetaData, getAllSongMetaData, getSongMetaData, getBookIndex };
+export { getBookUrls, fetchBookSummary, getAllBookMetaData, getAllSongMetaData, getSongMetaData };

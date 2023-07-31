@@ -2,8 +2,14 @@ import { useJSONFetch } from "@/composables/cancelable_fetch";
 import { prepackaged_books, includes, all_references } from "@/scripts/constants";
 import type { BookSummary, BookIndex, SongList } from "@/scripts/types";
 import type { BookReference } from "@/scripts/constants";
-import { reactive } from "vue";
+import { computed, reactive, type MaybeRef, unref } from "vue";
 import { Capacitor } from "@capacitor/core";
+import { useCapacitorPreferences } from "@/composables/preferences";
+
+export function useAvailableBookRefs() {
+    const imported_book_refs = useCapacitorPreferences<BookReference[]>("externalBooks", []);
+    return computed(() => (prepackaged_books as readonly BookReference[]).concat(imported_book_refs.value));
+}
 
 function getRemoteBookUrl(book_short_name: BookReference): string {
     return `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${import.meta.env.VITE_GIT_BRANCH}/` + "books/" + book_short_name;
@@ -55,12 +61,20 @@ export function useBookIndex(book_short_name: BookReference) {
     return { index, ...rest };
 }
 
-export function useBookSummaries(book_references: BookReference[] = [...all_references]) {
-    const summary_fetch_results = book_references.map(book_short_name => useBookSummary(book_short_name));
-    return reactive(Object.fromEntries(book_references.map((k, i) => [k, summary_fetch_results[i]])));
+export function useBookSummaries(book_references: MaybeRef<BookReference[]> = [...all_references]) {
+    return reactive(
+        computed(() => {
+            const summary_fetch_results = unref(book_references).map(book_short_name => useBookSummary(book_short_name));
+            return Object.fromEntries(unref(book_references).map((k, i) => [k, summary_fetch_results[i]]));
+        })
+    );
 }
 
-export function useBookSongLists(book_references: BookReference[] = [...all_references]) {
-    const song_list_fetch_results = book_references.map(book_short_name => useBookSongList(book_short_name));
-    return reactive(Object.fromEntries(book_references.map((k, i) => [k, song_list_fetch_results[i]])));
+export function useBookSongLists(book_references: MaybeRef<BookReference[]> = [...all_references]) {
+    return reactive(
+        computed(() => {
+            const song_list_fetch_results = unref(book_references).map(book_short_name => useBookSongList(book_short_name));
+            return Object.fromEntries(unref(book_references).map((k, i) => [k, song_list_fetch_results[i]]));
+        })
+    );
 }

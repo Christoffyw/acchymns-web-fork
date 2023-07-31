@@ -1,3 +1,5 @@
+import type { BookReference } from "./constants";
+
 // Locked in as of 2.0.0
 type BookSummary = {
     name: {
@@ -43,7 +45,7 @@ type BookIndex = Record<string, string[]>;
 
 type SearchParams = {
     search: string;
-    bookFilters: string[]; // Short names of books
+    bookFilters: BookReference[]; // Short names of books
 };
 
 export type { BookSummary, Song, SongList, SongSearchInfo, SongReference, BookIndex, SearchParams };

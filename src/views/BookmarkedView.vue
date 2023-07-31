@@ -1,20 +1,16 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { computed, ref, onMounted, watch } from "vue";
+import { computed, ref } from "vue";
 import { Capacitor } from "@capacitor/core";
-import type { SongReference, SongSearchInfo, Song, BookSummary, SongList } from "@/scripts/types";
+import type { SongReference, SongSearchInfo, Song, BookSummary } from "@/scripts/types";
 
 import { useCapacitorPreferences } from "@/composables/preferences";
 import { useBookSummaries, useBookSongLists } from "@/composables/book_metadata";
+import { cleanStr } from "@/scripts/search";
 
 let search_query = ref("");
 let stripped_query = computed(() => {
-    return search_query.value
-        .replace(/[.,/#!$%^&*;:{}=\-_`~()]/g, "")
-        .replace(/s{2,}/g, " ")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "");
+    return cleanStr(search_query.value);
 });
 
 let search_results = computed(() => {
@@ -32,8 +28,8 @@ const song_lists = useBookSongLists();
 const available_songs = computed<SongSearchInfo[]>(() => {
     const result: SongSearchInfo[] = [];
     for (const bookmark of bookmarks.value) {
-        const song: Song | null = (song_lists?.[bookmark.book]?.list as unknown as SongList | null)?.[bookmark.number] ?? null;
-        const summary: BookSummary | null = (book_summaries?.[bookmark.book]?.summary as unknown as BookSummary | null) ?? null;
+        const song: Song | null = song_lists.value?.[bookmark.book]?.list.value?.[bookmark.number] ?? null;
+        const summary: BookSummary | null = book_summaries.value?.[bookmark.book]?.summary.value ?? null;
         if (song && summary) {
             result.push({
                 title: song.title ?? "",

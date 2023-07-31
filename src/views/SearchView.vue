@@ -1,30 +1,27 @@
 <script setup lang="ts">
 import { RouterLink } from "vue-router";
-import { getAllSongMetaData, getAllBookMetaData } from "@/scripts/book_import";
-import { computed, ref, onMounted, watch, onUpdated } from "vue";
+import { computed, ref, watch } from "vue";
 import { useSessionStorage } from "@vueuse/core";
 import { Capacitor } from "@capacitor/core";
 import type { BookSummary, Song, SongSearchInfo, SearchParams } from "@/scripts/types";
 import { hexToRgb, Color, Solver } from "@/scripts/color";
+import { cleanStr } from "@/scripts/search";
+import { useAvailableBookRefs, useBookSummaries, useBookSongLists } from "@/composables/book_metadata";
+import type { BookReference } from "@/scripts/constants";
 
 const search_params = useSessionStorage<SearchParams>("searchParams", { search: "", bookFilters: [] });
+const available_book_refs = useAvailableBookRefs();
+const book_summaries = useBookSummaries(available_book_refs);
+const song_lists = useBookSongLists(available_book_refs);
 
 const search_query = ref(search_params.value.search);
 const stripped_query = computed(() => {
-    return search_query.value
-        .replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")
-        .replace(/s{2,}/g, " ")
-        .toLowerCase()
-        .normalize("NFD")
-        .replace(/\p{Diacritic}/gu, "");
+    return cleanStr(search_query.value);
 });
 
 watch(search_query, new_query => {
     search_params.value.search = new_query;
 });
-
-const available_songs = ref<SongSearchInfo[]>([]);
-const available_books = ref<BookSummary[]>([]);
 
 const search_results = computed(() => {
     if (search_params.value.bookFilters.length > 0) {
@@ -57,33 +54,23 @@ const limited_search_results = computed(() => {
     return search_results.value.slice(0, display_limit.value);
 });
 
-onMounted(async () => {
-    const BOOK_METADATA = await getAllBookMetaData();
-    const SONG_METADATA = await getAllSongMetaData();
-    available_books.value.push(...Object.values(BOOK_METADATA));
-    for (const book of Object.keys(SONG_METADATA)) {
-        for (const song_number of Object.keys(SONG_METADATA[book])) {
-            let song: Song = SONG_METADATA[book][song_number];
-            available_songs.value.push({
-                title: song?.title ?? "",
-                number: song_number,
-                book: BOOK_METADATA[book],
-                stripped_title: song.title
-                    .replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")
-                    .replace(/s{2,}/g, " ")
-                    .toLowerCase()
-                    .normalize("NFD")
-                    .replace(/\p{Diacritic}/gu, ""),
-                stripped_first_line:
-                    song?.first_line
-                        ?.replace(/[.,/#!$%^&*;:{}=\-_'"`~()]/g, "")
-                        ?.replace(/s{2,}/g, " ")
-                        ?.toLowerCase()
-                        ?.normalize("NFD")
-                        ?.replace(/\p{Diacritic}/gu, "") ?? "",
-            } as SongSearchInfo);
+const available_songs = computed<SongSearchInfo[]>(() => {
+    const result: SongSearchInfo[] = [];
+    for (const book_ref of available_book_refs.value) {
+        for (const song_number of Object.keys(song_lists.value[book_ref].list.value ?? {})) {
+            const song: Song | null = song_lists.value[book_ref].list.value?.[song_number] ?? null;
+            const summary: BookSummary | null = book_summaries.value?.[book_ref]?.summary.value;
+            if (song && summary) {
+                result.push({
+                    title: song.title ?? "",
+                    number: song_number,
+                    book: summary,
+                    stripped_title: cleanStr(song.title ?? ""),
+                } as SongSearchInfo);
+            }
         }
     }
+    return result;
 });
 
 const filter_content = ref<Element>();
@@ -110,11 +97,11 @@ let all_hymnals_filter = ref<Element>();
 
 function filterBook(short_book_name: string) {
     isOpen = true;
-    if (search_params.value.bookFilters.includes(short_book_name)) {
+    if (search_params.value.bookFilters.includes(short_book_name as BookReference)) {
         let index = search_params.value.bookFilters.findIndex(b => b == short_book_name);
         search_params.value.bookFilters.splice(index, 1);
     } else {
-        search_params.value.bookFilters.push(short_book_name);
+        search_params.value.bookFilters.push(short_book_name as BookReference);
     }
 }
 
@@ -130,20 +117,15 @@ function checkmarked(selected: boolean) {
     }
 }
 
-onUpdated(async () => {
-    for (var i = 0; i < book_filters.value?.length; i++) {
-        const img = book_filters.value?.at(i)?.children[0].children[0];
-        const rgb = hexToRgb(available_books.value.at(i)?.primaryColor ?? "#000000");
-        if (rgb?.length !== 3) {
-            alert("Invalid format!");
-            return;
-        }
-        const color = new Color(rgb[0], rgb[1], rgb[2]);
-        const solver = new Solver(color);
-        const result = solver.solve();
-        img?.setAttribute("style", `${result.filter}`);
+function colorFilter(primary_color?: string) {
+    const rgb = hexToRgb(primary_color ?? "#000000");
+    if (rgb?.length !== 3) {
+        return "#000000";
     }
-});
+    const solver = new Solver(new Color(rgb[0], rgb[1], rgb[2]));
+    const result = solver.solve();
+    return result.filter;
+}
 </script>
 
 <template>
@@ -172,10 +154,10 @@ onUpdated(async () => {
                         <div class="dropdown-content-text">All Hymnals</div>
                     </div>
                 </a>
-                <a v-for="book in available_books" :key="book.name.medium" @click="filterBook(book.name.short)" ref="book_filters">
+                <a v-for="book_ref in available_book_refs" :key="book_ref" @click="filterBook(book_ref)" ref="book_filters">
                     <div class="dropdown-content-item">
-                        <img class="ionicon" :src="checkmarked(search_params.bookFilters.includes(book.name.short))" />
-                        <div class="dropdown-content-text">{{ book.name.medium }}</div>
+                        <img class="ionicon" :src="checkmarked(search_params.bookFilters.includes(book_ref))" :style="colorFilter(book_summaries[book_ref].summary.value?.primaryColor)" />
+                        <div class="dropdown-content-text">{{ book_summaries[book_ref].summary.value?.name?.medium }}</div>
                     </div>
                 </a>
             </div>

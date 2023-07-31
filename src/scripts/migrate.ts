@@ -3,13 +3,13 @@ import { compare } from "compare-versions";
 
 export async function migrate() {
     const current_semver_version = import.meta.env.VITE_APP_VERSION;
-    const previous_semver_version = await Preferences.get({ key: "AppVersion" });
-    if (previous_semver_version.value === current_semver_version) {
+    const previous_semver_version = (await Preferences.get({ key: "AppVersion" })).value ?? "0.0.0";
+    if (compare(previous_semver_version, current_semver_version, ">=")) {
         return;
     }
 
     // Pre-2.0.0, as after this version, we always set the AppVersion.
-    if (previous_semver_version.value == null) {
+    if (compare(previous_semver_version, "2.0.0", "<")) {
         // Migrate from 1.X.Y to 2.0.0
         // All that's required to migrate, is to move bookmark data from localStorage to Capacitor Storage.
         // and to change from { book: string, song: string } to { book: string, number: string }
@@ -25,12 +25,18 @@ export async function migrate() {
         }
         new_bookmarks = [...new Set(new_bookmarks)]; // Remove duplicates, if any
         await Preferences.set({ key: "bookmarks", value: JSON.stringify(new_bookmarks) });
-    } else if (compare(previous_semver_version.value, "2.0.3", "<")) {
+    }
+
+    if (compare(previous_semver_version, "2.0.3", "<")) {
         // Migrate from 2.X.Y to 2.0.3
         // Migrate from URLs for external books to references
         const external_books: string[] = JSON.parse((await Preferences.get({ key: "externalBooks" })).value ?? "[]");
         for (let i = 0; i < external_books.length; i++) {
             const url = external_books[i];
+            if (url.length < 5) {
+                // This is a reference, not a URL
+                continue;
+            }
             const book_reference = url.split("books/")[1]; // Get the book reference, ex: acchymns.app/books/CH -> CH
             external_books[i] = book_reference;
         }

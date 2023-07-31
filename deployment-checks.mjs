@@ -14,6 +14,8 @@ const books = fs.readdirSync("public/books");
 const missing_images = [];
 const missing_number = [];
 const blank_notes = [];
+const file_size_avgs = [];
+const book_lengths = [];
 for (const book of books) {
     console.log("Checking", book);
 
@@ -50,6 +52,19 @@ for (const book of books) {
             blank_notes.push(book + " - " + song_number);
         }
     }
+
+    const summary = JSON.parse(fs.readFileSync(path.join("public/books", book, "summary.json")));
+    if (summary.addOn) {
+        let file_size_avg = 0;
+        const song_image_files = fs.readdirSync(path.join("public/books", book, "songs"));
+        for (const file of song_image_files) {
+            file_size_avg += fs.statSync(path.join("public/books", book, "songs", file)).size;
+        }
+        file_size_avg /= image_titles.length;
+        book_lengths.push(image_titles.length);
+        file_size_avgs.push(file_size_avg);
+        console.log(`Average file size for ${book}:`, (file_size_avg/1024).toFixed(1), "KiB");
+    }
 }
 
 if (missing_images.length > 0) {
@@ -61,6 +76,14 @@ if (missing_number.length > 0) {
     console.log("Missing numbers:");
     console.log(missing_number.join("\n"));
 }
+
+let total_avg = 0;
+for (let i = 0; i < file_size_avgs.length; i++) {
+    total_avg += file_size_avgs[i] * book_lengths[i];
+}
+total_avg /= book_lengths.reduce((a, b) => a + b, 0);
+console.log("Average file size for addon books:", (total_avg/1024).toFixed(1), "KiB");
+console.log(missing_number.join("\n"));
 
 const branch_name = execSync("git branch --show-current").toString().trimEnd();
 const is_production_or_staging = branch_name == "staging" || branch_name == "main";

@@ -5,6 +5,7 @@ const { back } = useNavigator();
 
 // This is retrieved from the package.json
 const version: string = import.meta.env.VITE_FULL_PROGRAM_VERSION;
+const branch: string = import.meta.env.VITE_GIT_BRANCH;
 </script>
 
 <template>
@@ -16,7 +17,10 @@ const version: string = import.meta.env.VITE_FULL_PROGRAM_VERSION;
     </div>
 
     <div class="main-content">
-        <h2>ACC Hymns Version {{ version }}</h2>
+        <h2>
+            ACC Hymns Version {{ version }}
+            <template v-if="branch != 'main' && branch != 'staging'">({{ branch }})</template>
+        </h2>
 
         <div class="settings">
             <RouterLink to="/settings/about/attributions" class="settings-option">

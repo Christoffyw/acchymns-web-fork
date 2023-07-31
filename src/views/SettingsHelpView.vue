@@ -2,7 +2,6 @@
 import { useNavigator } from "@/router/navigator";
 const { back } = useNavigator();
 import { RouterLink } from "vue-router";
-import { clearCache } from "@/composables/cached_fetch";
 import { resetOptions } from "@/stores/options";
 import { Toast } from "@capacitor/toast";
 import { Dialog } from "@capacitor/dialog";
@@ -10,22 +9,6 @@ import { Dialog } from "@capacitor/dialog";
 // This is retrieved from the package.json
 const version: string = import.meta.env.VITE_FULL_PROGRAM_VERSION;
 const is_prerelease = version.includes("Beta") || version.includes("Alpha");
-
-async function clearFetchCache() {
-    const confirmed = await Dialog.confirm({
-        title: "Clear Cache",
-        message: "Are you sure you want to clear the cache?",
-        okButtonTitle: "Yes",
-        cancelButtonTitle: "No",
-    });
-
-    if (confirmed.value) {
-        clearCache();
-        Toast.show({
-            text: "Cleared Cache!",
-        });
-    }
-}
 
 async function resetAllOptions() {
     const confirmed = await Dialog.confirm({
@@ -46,7 +29,7 @@ async function resetAllOptions() {
 async function clearAllData() {
     const confirmed = await Dialog.confirm({
         title: "Clear All Data",
-        message: "Are you sure you want to clear ALL your data? This includes bookmarks and imported books!",
+        message: "Are you sure you want to clear ALL your data? This may include bookmarks and imported books!",
         okButtonTitle: "Yes",
         cancelButtonTitle: "No",
     });
@@ -81,9 +64,6 @@ async function clearAllData() {
             <span>Debug Console</span>
             <img class="entrypoint ionicon" src="/assets/chevron-forward-outline.svg" />
         </RouterLink>
-        <a class="settings-option" @click="clearFetchCache()">
-            <span>Clear Cache</span>
-        </a>
         <a class="settings-option" @click="resetAllOptions()">
             <span>Reset Options</span>
         </a>

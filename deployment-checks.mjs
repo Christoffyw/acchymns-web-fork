@@ -63,7 +63,7 @@ for (const book of books) {
         file_size_avg /= image_titles.length;
         book_lengths.push(image_titles.length);
         file_size_avgs.push(file_size_avg);
-        console.log(`Average file size for ${book}:`, (file_size_avg/1024).toFixed(1), "KiB");
+        console.log(`Average file size for ${book}:`, (file_size_avg / 1024).toFixed(1), "KiB");
     }
 }
 
@@ -82,7 +82,7 @@ for (let i = 0; i < file_size_avgs.length; i++) {
     total_avg += file_size_avgs[i] * book_lengths[i];
 }
 total_avg /= book_lengths.reduce((a, b) => a + b, 0);
-console.log("Average file size for addon books:", (total_avg/1024).toFixed(1), "KiB");
+console.log("Average file size for addon books:", (total_avg / 1024).toFixed(1), "KiB");
 console.log(missing_number.join("\n"));
 
 const branch_name = execSync("git branch --show-current").toString().trimEnd();

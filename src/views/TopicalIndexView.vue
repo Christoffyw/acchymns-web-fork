@@ -5,6 +5,7 @@ import type { Song } from "@/scripts/types";
 import { useSessionStorage } from "@vueuse/core";
 import { useBookIndex, useBookSongList, useBookSummary } from "@/composables/book_metadata";
 import type { BookReference } from "@/scripts/constants";
+import { displayMissingBookDialog } from "@/scripts/missing_book_dialog";
 
 const props = defineProps<{
     book: string;
@@ -73,6 +74,8 @@ const alphabetical_songs = computed<Song[]>(() => {
 
     return result;
 });
+
+displayMissingBookDialog(props.book as BookReference);
 
 onMounted(async () => {
     if (isAlphabetical.value) {

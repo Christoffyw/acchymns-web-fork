@@ -6,6 +6,7 @@ import { useLocalStorage, useSessionStorage } from "@vueuse/core";
 import type { BookReference } from "@/scripts/constants";
 
 import { saveScrollPosition, restoreScrollPosition } from "@/router/scroll";
+import { displayMissingBookDialog } from "@/scripts/missing_book_dialog";
 
 const props = defineProps<{
     book: string;
@@ -29,6 +30,8 @@ const song_numbers = computed(() => {
     if (song_list.value == null) return [];
     return Object.keys(song_list.value).sort((a, b) => a.localeCompare(b, "en", { numeric: true }));
 });
+
+displayMissingBookDialog(props.book as BookReference);
 
 onMounted(async () => {
     useSessionStorage<boolean>("isAlphabetical", false).value = false;

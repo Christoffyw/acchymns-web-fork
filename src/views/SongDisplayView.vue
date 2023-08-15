@@ -9,6 +9,7 @@ import { useCapacitorPreferences } from "@/composables/preferences";
 import { useLocalStorage } from "@vueuse/core";
 import { useBookSongList } from "@/composables/book_metadata";
 import type { BookReference } from "@/scripts/constants";
+import { displayMissingBookDialog } from "@/scripts/missing_book_dialog";
 
 const props = defineProps<SongReference>();
 
@@ -52,6 +53,8 @@ function play() {
     player.play(notes.value);
     hideTooltip();
 }
+
+displayMissingBookDialog(props.book as BookReference);
 
 function hideTooltip() {
     tooltip.value?.classList.add("tooltiphidden");

@@ -11,11 +11,11 @@ export function useAvailableBookRefs() {
     return computed(() => (prepackaged_books as readonly BookReference[]).concat(imported_book_refs.value));
 }
 
-function getRemoteBookUrl(book_short_name: BookReference): string {
+export function getRemoteBookUrl(book_short_name: BookReference): string {
     return `https://raw.githubusercontent.com/ACC-Hymns/acchymns-web/${import.meta.env.VITE_GIT_BRANCH}/` + "books/" + book_short_name;
 }
 
-function getLocalBookUrl(book_short_name: BookReference): string {
+export function getLocalBookUrl(book_short_name: BookReference): string {
     return import.meta.env.BASE_URL + "books/" + book_short_name;
 }
 

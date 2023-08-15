@@ -7,6 +7,34 @@ export type UseCancelableFetchOptions = RequestInit & {
     cacheLife?: number; // How long to retain the cache in milliseconds
 };
 
+export async function fetchJSON<T>(url: RequestInfo | URL, options: UseCancelableFetchOptions): Promise<T> {
+    const controller = new AbortController();
+    let id;
+    if (options.timeout) {
+        id = setTimeout(() => controller.abort(), options.timeout);
+    }
+    const resp = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+    });
+    clearTimeout(id);
+    const json: T = await resp.json();
+    return json;
+}
+
+export async function cancellableFetchJSON<T>(url: RequestInfo | URL, options: UseCancelableFetchOptions): Promise<T | null> {
+    try {
+        return fetchJSON<T>(url, options);
+    } catch (ex: any) {
+        // Any extra errors should be reported, aborts we can ignore
+        const e = ex as DOMException;
+        if (e.name != "AbortError") {
+            console.error("Primary URL:", e, e.stack);
+        }
+    }
+    return null;
+}
+
 export function useJSONFetch<T>(url: RequestInfo | URL, options: UseCancelableFetchOptions) {
     const data: Ref<T | null> = ref(null);
     const isFetching = ref<boolean>(false);
@@ -14,32 +42,12 @@ export function useJSONFetch<T>(url: RequestInfo | URL, options: UseCancelableFe
     const isFinished = ref<boolean>(false);
     const isFailed = ref<boolean>(false);
 
-    async function fetchJSON(url: RequestInfo | URL, options: UseCancelableFetchOptions) {
-        console.log(url);
-        const controller = new AbortController();
-        let id;
-        if (options.timeout) {
-            id = setTimeout(() => controller.abort(), options.timeout);
-        }
-        const resp = await fetch(url, {
-            ...options,
-            signal: controller.signal,
-        });
-        if (options.timeout) {
-            clearTimeout(id);
-        }
-        isFetching.value = false;
-        const json: T = await resp.json();
-        return json;
-    }
-
     async function execute() {
         // Set starting lifecycle reporting
         isFetching.value = false;
         isSlowFetch.value = false;
         isFinished.value = false;
         isFailed.value = false;
-
         isFetching.value = true;
 
         // When no timeout is set, a slow fetch is 5 seconds

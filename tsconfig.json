@@ -10,5 +10,6 @@
         "module": "es2022",
         "strict": true,
         "moduleResolution": "node",
+        "target": "ES2016",
     }
 }

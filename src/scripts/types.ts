@@ -1,3 +1,5 @@
+import type { RouteLocationNormalizedLoaded } from "vue-router";
+
 type BookSummary = {
     name: {
         short: string;
@@ -13,9 +15,30 @@ type BookSummary = {
     srcUrl?: string;
 };
 
+enum BookSourceType {
+    BUNDLED,
+    HIDDEN,
+    PREVIEW,
+    IMPORTED,
+    DOWNLOADED
+}
+
+type BookDataSummary = {
+    id: string; // e.g. ZH
+    status: BookSourceType;
+    src: string; // URL, can either be local, raw.github or a converted "file://"
+    name?: {
+        short: string;
+        medium: string;
+        long: string;
+    };
+    primaryColor?: string;
+    secondaryColor?: string;
+}
+
 type Song = {
     title: string;
-    number?: string; // Numbers unfortunately can be strings: ex: 403a GH
+    number?: string; // Numbers unfortunately can be strings: e.g. 403a GH
     notes?: string[];
     first_line?: string;
 };
@@ -62,4 +85,19 @@ type Bible = {
     books: BibleBook[];
 };
 
-export type { BookSummary, Song, SongList, SongSearchInfo, SongReference, BookIndex, SearchParams, BibleVerse, BibleChapter, BibleBook, Bible};
+type BookSignature = {
+    name: string,
+    hash: string,
+    parent?: BookSignature,
+    children?: BookSignature[]
+};
+
+type UpdatePackage = {
+    book_short: string,
+    book_summary?: BookSummary,
+    paths: string[]
+}
+
+export { BookSourceType };
+
+export type { BookDataSummary, BookSummary, Song, SongList, SongSearchInfo, SongReference, BookIndex, SearchParams, BibleVerse, BibleChapter, BibleBook, Bible, BookSignature, UpdatePackage};
